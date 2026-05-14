@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open World 1: Force of Nature Trainer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f0f4f8; }
+        .container { width: 450px; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); text-align: center; }
+        .header { font-size: 0.9rem; color: #007bff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-weight: bold; }
+        .word { font-size: 2.2rem; font-weight: bold; color: #2d3436; margin: 20px 0; min-height: 80px; display: flex; align-items: center; justify-content: center; line-height: 1.2; }
+        input { width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #dfe6e9; border-radius: 12px; outline: none; transition: all 0.3s; box-sizing: border-box; text-align: center; }
+        input:focus { border-color: #007bff; }
+        .feedback { margin-top: 15px; min-height: 50px; font-weight: bold; font-size: 1rem; }
+        .controls { margin-top: 25px; display: flex; gap: 10px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: opacity 0.2s; }
+        .btn-check { background: #00b894; color: white; }
+        .btn-next { background: #007bff; color: white; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .progress-container { margin-top: 20px; }
+        .progress-bar { width: 100%; height: 8px; background: #dfe6e9; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #00b894; width: 0%; transition: width 0.3s; }
+        .correct { color: #00b894; }
+        .wrong { color: #d63031; }
+        .solution { color: #007bff; display: block; margin-top: 5px; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">Unit 5: Force of Nature</div>
+    <div class="word" id="word-display">Lade...</div>
+    
+    <input type="text" id="user-input" placeholder="Englische Antwort..." autocomplete="off">
+    <div id="feedback" class="feedback"></div>
+
+    <div class="controls">
+        <button class="btn-check" id="check-btn" onclick="processAttempt()">Prüfen</button>
+        <button class="btn-next" id="next-btn" onclick="nextCard()" disabled>Nächste Karte</button>
+    </div>
+    
+    <div class="progress-container">
+        <div id="stats" style="font-size: 0.8rem; color: #888; margin-bottom: 5px;">Karten im Stapel: 0</div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+</div>
+
+<script>
+    // Komplette Vokabelliste aus dem Buch
+    const fullVocab = [
+  { "eng": "natural", "de": "natürlich, Natur-" },
+  { "eng": "disaster", "de": "Katastrophe, Unglücksfall" },
+  { "eng": "national park", "de": "Nationalpark (Naturpark)" },
+  { "eng": "lively", "de": "lebhaft, lebendig, munter" },
+  { "eng": "disadvantage", "de": "Nachteil" },
+  { "eng": "danger", "de": "Gefahr" },
+  { "eng": "nature", "de": "Natur, Beschaffenheit" },
+  { "eng": "risk", "de": "Risiko, Gefahr" },
+  { "eng": "cause", "de": "verursachen, bewirken" },
+  { "eng": "escape", "de": "entfliehen, entkommen" },
+  { "eng": "storm", "de": "Sturm, Gewitter" },
+  { "eng": "volcano, volcanoes", "de": "Vulkan" },
+  { "eng": "earthquake", "de": "Erdbeben" },
+  { "eng": "information", "de": "Information, Informationen" },
+  { "eng": "emergency kit", "de": "Notfallausrüstung" },
+  { "eng": "destructive", "de": "zerstörerisch" },
+  { "eng": "erupt", "de": "ausbrechen (Vulkan)" },
+  { "eng": "eruption", "de": "(Vulkan-)Ausbruch" },
+  { "eng": "die", "de": "sterben" },
+  { "eng": "die out", "de": "aussterben" },
+  { "eng": "tornado, tornadoes", "de": "Tornado, Wirbelsturm" },
+  { "eng": "destroy", "de": "zerstören" },
+  { "eng": "roof", "de": "(Haus-)Dach" },
+  { "eng": "damage (verb)", "de": "beschädigen" },
+  { "eng": "damage (noun)", "de": "Schaden, Beschädigung" },
+  { "eng": "consequence", "de": "Folge, Konsequenz" },
+  { "eng": "volcanic", "de": "vulkanisch, Vulkan-" },
+  { "eng": "event", "de": "Ereignis" },
+  { "eng": "geyser", "de": "Geysir" },
+  { "eng": "steam", "de": "Dampf" },
+  { "eng": "boil", "de": "kochen, sieden" },
+  { "eng": "turn into sth.", "de": "zu etwas werden, sich in etwas verwandeln" },
+  { "eng": "rock", "de": "Felsen, Felsgestein" },
+  { "eng": "ground", "de": "Boden, Erde, Erdboden" },
+  { "eng": "heat", "de": "Hitze" },
+  { "eng": "earth", "de": "Erde, Welt" },
+  { "eng": "last", "de": "dauern, andauern" },
+  { "eng": "summary", "de": "Zusammenfassung" },
+  { "eng": "film review", "de": "Filmbesprechung, Filmrezension" },
+  { "eng": "scientist", "de": "Wissenschaftler, Wissenschaftlerin" },
+  { "eng": "lava", "de": "Lava" },
+  { "eng": "ash", "de": "Asche" },
+  { "eng": "touch down", "de": "hier: den Boden berühren; auch: landen (Flugzeug)" },
+  { "eng": "hit - hit - hit", "de": "hier: treffen; auch: (körperlich) schlagen" },
+  { "eng": "news channel", "de": "Nachrichtensender (Fernsehen)" },
+  { "eng": "report", "de": "Bericht" },
+  { "eng": "news report", "de": "Meldung, Reportage" },
+  { "eng": "tear - tore - torn", "de": "reissen, zerreissen" },
+  { "eng": "tear sth. off", "de": "abreissen, wegreissen" },
+  { "eng": "look for sth.", "de": "suchen" },
+  { "eng": "mood", "de": "Stimmung, Laune" },
+  { "eng": "compare", "de": "vergleichen" },
+  { "eng": "basement", "de": "Keller, Untergeschoss" },
+  { "eng": "eyewitness", "de": "Augenzeuge, Augenzeugin" },
+  { "eng": "eyewitness report", "de": "Augenzeugenbericht" },
+  { "eng": "experience", "de": "Erfahrung, Erlebnis" },
+  { "eng": "blow - blew - blown", "de": "hier: wehen; auch: blasen" },
+  { "eng": "lift", "de": "(hoch-)heben" },
+  { "eng": "climate", "de": "Klima" },
+  { "eng": "humid", "de": "feucht" },
+  { "eng": "quickly", "de": "schnell" },
+  { "eng": "reach", "de": "erreichen, erzielen" },
+  { "eng": "speed", "de": "Geschwindigkeit" },
+  { "eng": "wide", "de": "breit" }
+    ];
+
+    let deck = [...fullVocab].sort(() => Math.random() - 0.5);
+    let currentCard = null;
+    let failCount = 0;
+    let correctCount = 0;
+
+    function nextCard() {
+        if (deck.length === 0) {
+            document.getElementById('word-display').innerText = "Alles gelernt! 🎉";
+            document.getElementById('user-input').style.display = "none";
+            document.getElementById('check-btn').style.display = "none";
+            document.getElementById('next-btn').style.display = "none";
+            return;
+        }
+
+        currentCard = deck[0]; 
+        failCount = 0;
+        
+        document.getElementById('word-display').innerText = currentCard.de;
+        document.getElementById('user-input').value = "";
+        document.getElementById('user-input').style.borderColor = "#dfe6e9";
+        document.getElementById('feedback').innerHTML = "";
+        document.getElementById('next-btn').disabled = true;
+        document.getElementById('check-btn').disabled = false;
+        document.getElementById('user-input').focus();
+        updateUI();
+    }
+
+    function processAttempt() {
+        const input = document.getElementById('user-input').value.trim().toLowerCase();
+        const correct = currentCard.eng.toLowerCase();
+        const cleanCorrect = correct.replace("to ", "");
+
+        if (input === correct || input === cleanCorrect) {
+            document.getElementById('feedback').innerHTML = "<span class='correct'>Richtig!</span>";
+            document.getElementById('user-input').style.borderColor = "#00b894";
+            
+            // Karte aus dem Stapel entfernen
+            deck.shift();
+            correctCount++;
+            
+            document.getElementById('check-btn').disabled = true;
+            document.getElementById('next-btn').disabled = false;
+        } else {
+            failCount++;
+            document.getElementById('user-input').style.borderColor = "#d63031";
+
+            if (failCount >= 3) {
+                document.getElementById('feedback').innerHTML = 
+                    `<span class='wrong'>Lösung:</span><span class='solution'>${currentCard.eng}</span>`;
+                
+                // Karte ans Ende des Stapels schieben (damit sie wiederkommt)
+                let failedCard = deck.shift();
+                deck.push(failedCard);
+                
+                document.getElementById('next-btn').disabled = false;
+                document.getElementById('check-btn').disabled = true;
+            } else {
+                document.getElementById('feedback').innerHTML = `<span class='wrong'>Versuch ${failCount}/3</span>`;
+            }
+        }
+    }
+
+    function updateUI() {
+        const progress = (correctCount / fullVocab.length) * 100;
+        document.getElementById('progress-fill').style.width = progress + "%";
+        document.getElementById('stats').innerText = `Karten im Stapel: ${deck.length}`;
+    }
+
+    document.getElementById('user-input').addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            if (!document.getElementById('check-btn').disabled) processAttempt();
+            else nextCard();
+        }
+    });
+
+    nextCard();
+</script>
+</body>
+</html>
