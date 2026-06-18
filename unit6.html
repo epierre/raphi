@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open World 1: Force of Nature Trainer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f0f4f8; }
+        .container { width: 450px; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); text-align: center; }
+        .header { font-size: 0.9rem; color: #007bff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-weight: bold; }
+        .word { font-size: 2.2rem; font-weight: bold; color: #2d3436; margin: 20px 0; min-height: 80px; display: flex; align-items: center; justify-content: center; line-height: 1.2; }
+        input { width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #dfe6e9; border-radius: 12px; outline: none; transition: all 0.3s; box-sizing: border-box; text-align: center; }
+        input:focus { border-color: #007bff; }
+        .feedback { margin-top: 15px; min-height: 50px; font-weight: bold; font-size: 1rem; }
+        .controls { margin-top: 25px; display: flex; gap: 10px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: opacity 0.2s; }
+        .btn-check { background: #00b894; color: white; }
+        .btn-next { background: #007bff; color: white; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .progress-container { margin-top: 20px; }
+        .progress-bar { width: 100%; height: 8px; background: #dfe6e9; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #00b894; width: 0%; transition: width 0.3s; }
+        .correct { color: #00b894; }
+        .wrong { color: #d63031; }
+        .solution { color: #007bff; display: block; margin-top: 5px; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">Unit 6</div>
+    <div class="word" id="word-display">Lade...</div>
+    
+    <input type="text" id="user-input" placeholder="Englische Antwort..." autocomplete="off">
+    <div id="feedback" class="feedback"></div>
+
+    <div class="controls">
+        <button class="btn-check" id="check-btn" onclick="processAttempt()">Prüfen</button>
+        <button class="btn-next" id="next-btn" onclick="nextCard()" disabled>Nächste Karte</button>
+    </div>
+    
+    <div class="progress-container">
+        <div id="stats" style="font-size: 0.8rem; color: #888; margin-bottom: 5px;">Karten im Stapel: 0</div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+</div>
+
+<script>
+    // Komplette Vokabelliste aus dem Buch
+    const fullVocab = [
+        // Première image (Unit 6 / Exposure & Task A)
+        { "eng": "list", "de": "auflisten" },
+        { "eng": "list", "de": "Liste" },
+        { "eng": "unhealthy", "de": "ungesund" },
+        { "eng": "conversation", "de": "Gespräch" },
+        { "eng": "component", "de": "Bestandteil" },
+        { "eng": "carbohydrate", "de": "Kohlenhydrat" },
+        { "eng": "fibre", "de": "(Nahrungs-)Faser" },
+        { "eng": "protein", "de": "Eiweiss, Protein" },
+        { "eng": "fat", "de": "Fett" },
+        { "eng": "salt", "de": "Salz" },
+        { "eng": "additive", "de": "Zusatzstoff" },
+        { "eng": "colouring", "de": "Farbstoff" },
+        { "eng": "sweetener", "de": "Süssstoff" },
+        { "eng": "flavouring", "de": "Aromastoff" },
+        { "eng": "preservative", "de": "Konservierungsmittel" },
+        { "eng": "ingredient", "de": "Zutat, Inhaltsstoff" },
+        { "eng": "mostly", "de": "vorwiegend" },
+        { "eng": "lots of", "de": "eine Menge, sehr viele" },
+        { "eng": "label", "de": "Etikette" },
+        { "eng": "a lot of", "de": "viel, viele" },
+        { "eng": "not any", "de": "kein, keine" },
+        { "eng": "much", "de": "viel" },
+        { "eng": "too much", "de": "zu viel" },
+        { "eng": "little", "de": "hier: wenig; auch: klein" },
+        { "eng": "too many", "de": "zu viele" },
+        { "eng": "few", "de": "hier: ein paar; auch: wenige, einige" },
+        { "eng": "pie chart", "de": "Kreisdiagramm" },
+        { "eng": "contain", "de": "enthalten" },
+        { "eng": "per cent", "de": "Prozent" },
+        { "eng": "percentage", "de": "(prozentualer) Anteil, Prozentsatz" },
+        { "eng": "amount", "de": "Menge" },
+        { "eng": "surprising", "de": "überraschend" },
+        { "eng": "obvious", "de": "offensichtlich" },
+        { "eng": "represent", "de": "darstellen, verkörpern, vertreten" },
+        { "eng": "impossible", "de": "unmöglich" },
+        { "eng": "wrapping", "de": "Verpackung" },
+
+        // Deuxième image (Suite / Task B & Focus on skills)
+        { "eng": "quarter", "de": "Viertel" },
+        { "eng": "fifth", "de": "Fünftel" },
+        { "eng": "sixth", "de": "Sechstel" },
+        { "eng": "tenth", "de": "Zehntel" },
+        { "eng": "enough", "de": "genug" },
+        { "eng": "used to do sth.", "de": "etwas zu tun pflegen" },
+        { "eng": "habit", "de": "Gewohnheit" },
+        { "eng": "hardly", "de": "kaum" },
+        { "eng": "hardly ever", "de": "kaum jemals" },
+        { "eng": "normally", "de": "normalerweise" },
+        { "eng": "never", "de": "nie" },
+        { "eng": "sometimes", "de": "manchmal" },
+        { "eng": "usually", "de": "üblicherweise" },
+        { "eng": "often", "de": "oft, häufig" },
+        { "eng": "right away", "de": "auf der Stelle" },
+        { "eng": "disgusting", "de": "unappetitlich" },
+        { "eng": "savoury", "de": "salzig" },
+        { "eng": "tasty", "de": "lecker" },
+        { "eng": "spicy", "de": "würzig" },
+        { "eng": "tasteless", "de": "fade" },
+        { "eng": "similar", "de": "ähnlich" },
+        { "eng": "meaning", "de": "Bedeutung" },
+        { "eng": "unpleasant", "de": "unangenehm" },
+        { "eng": "flavour", "de": "Geschmack, Duft, Aroma" },
+        { "eng": "pleasant", "de": "angenehm" },
+        { "eng": "dish", "de": "Gericht (als Mahlzeit); in Mz. auch: Geschirr" },
+        { "eng": "appealing", "de": "appetitlich, ansprechend" },
+        { "eng": "common", "de": "häufig, alltäglich, allgemein, gemeinsam" },
+        { "eng": "have sth. in common", "de": "etwas gemeinsam haben" },
+        { "eng": "instead of", "de": "anstatt" },
+        { "eng": "seem", "de": "scheinen" },
+        { "eng": "sequence", "de": "Reihenfolge, Abfolge" },
+        { "eng": "topic", "de": "Thema" },
+        { "eng": "draft", "de": "Entwurf" }
+    ];
+
+    let deck = [...fullVocab].sort(() => Math.random() - 0.5);
+    let currentCard = null;
+    let failCount = 0;
+    let correctCount = 0;
+
+    function nextCard() {
+        if (deck.length === 0) {
+            document.getElementById('word-display').innerText = "Alles gelernt! 🎉";
+            document.getElementById('user-input').style.display = "none";
+            document.getElementById('check-btn').style.display = "none";
+            document.getElementById('next-btn').style.display = "none";
+            return;
+        }
+
+        currentCard = deck[0]; 
+        failCount = 0;
+        
+        document.getElementById('word-display').innerText = currentCard.de;
+        document.getElementById('user-input').value = "";
+        document.getElementById('user-input').style.borderColor = "#dfe6e9";
+        document.getElementById('feedback').innerHTML = "";
+        document.getElementById('next-btn').disabled = true;
+        document.getElementById('check-btn').disabled = false;
+        document.getElementById('user-input').focus();
+        updateUI();
+    }
+
+    function processAttempt() {
+        const input = document.getElementById('user-input').value.trim().toLowerCase();
+        const correct = currentCard.eng.toLowerCase();
+        const cleanCorrect = correct.replace("to ", "");
+
+        if (input === correct || input === cleanCorrect) {
+            document.getElementById('feedback').innerHTML = "<span class='correct'>Richtig!</span>";
+            document.getElementById('user-input').style.borderColor = "#00b894";
+            
+            // Karte aus dem Stapel entfernen
+            deck.shift();
+            correctCount++;
+            
+            document.getElementById('check-btn').disabled = true;
+            document.getElementById('next-btn').disabled = false;
+        } else {
+            failCount++;
+            document.getElementById('user-input').style.borderColor = "#d63031";
+
+            if (failCount >= 3) {
+                document.getElementById('feedback').innerHTML = 
+                    `<span class='wrong'>Lösung:</span><span class='solution'>${currentCard.eng}</span>`;
+                
+                // Karte ans Ende des Stapels schieben (damit sie wiederkommt)
+                let failedCard = deck.shift();
+                deck.push(failedCard);
+                
+                document.getElementById('next-btn').disabled = false;
+                document.getElementById('check-btn').disabled = true;
+            } else {
+                document.getElementById('feedback').innerHTML = `<span class='wrong'>Versuch ${failCount}/3</span>`;
+            }
+        }
+    }
+
+    function updateUI() {
+        const progress = (correctCount / fullVocab.length) * 100;
+        document.getElementById('progress-fill').style.width = progress + "%";
+        document.getElementById('stats').innerText = `Karten im Stapel: ${deck.length}`;
+    }
+
+    document.getElementById('user-input').addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            if (!document.getElementById('check-btn').disabled) processAttempt();
+            else nextCard();
+        }
+    });
+
+    nextCard();
+</script>
+</body>
+</html>
