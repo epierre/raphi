@@ -150,12 +150,20 @@
         updateUI();
     }
 
+
     function processAttempt() {
-        const input = document.getElementById('user-input').value.trim().toLowerCase();
+        const rawInput = document.getElementById('user-input').value.toLowerCase();
         const correct = currentCard.eng.toLowerCase();
         const cleanCorrect = correct.replace("to ", "");
 
-        if (input === correct || input === cleanCorrect) {
+        // Helper function to remove punctuation and extra spaces
+        const stripPunc = (str) => str.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").replace(/\s{2,}/g, " ").trim();
+
+        const inputCleaned = stripPunc(rawInput);
+        const correctCleaned = stripPunc(correct);
+        const cleanCorrectCleaned = stripPunc(cleanCorrect);
+
+        if (inputCleaned === correctCleaned || inputCleaned === cleanCorrectCleaned) {
             document.getElementById('feedback').innerHTML = "<span class='correct'>Richtig!</span>";
             document.getElementById('user-input').style.borderColor = "#00b894";
             
@@ -184,7 +192,6 @@
             }
         }
     }
-
     function updateUI() {
         const progress = (correctCount / fullVocab.length) * 100;
         document.getElementById('progress-fill').style.width = progress + "%";
